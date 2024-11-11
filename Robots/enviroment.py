@@ -104,5 +104,3 @@ if __name__ == "__main__":
     ga = GeneticAlgorithm(population_size=50, generations=10)
     ga.evolve_population()
     best_robot = ga.get_best_robot()
-
-
