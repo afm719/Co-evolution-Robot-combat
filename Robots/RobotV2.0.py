@@ -34,17 +34,17 @@ import random
 import matplotlib.pyplot as plt
 
 # Global parameters
-POPULATION_SIZE = 30  # Tamaño moderado para una evolución adecuada
+POPULATION_SIZE = 100  # Tamaño moderado para una evolución adecuada
 GENES = 10  # Mantén el tamaño de los genes en 10
-MAX_GENERATIONS = 200  # Asegura suficientes generaciones para la evolución
-MUTATION_RATE = 0.1  # Tasa de mutación moderada
-TOURNAMENT_SIZE = 5  # Selección de torneo de tamaño medio
+MAX_GENERATIONS = 410  # Asegura suficientes generaciones para la evolución
+MUTATION_RATE = 0.05  # Tasa de mutación moderada
+TOURNAMENT_SIZE = 7  # Selección de torneo de tamaño medio
 CROSSOVER_RATE = 0.8  # Alta probabilidad de cruce
-NO_IMPROVEMENT_LIMIT = 5  # Si no mejora en 5 generaciones, aumenta la mutación
+NO_IMPROVEMENT_LIMIT = 2  # Si no mejora en 5 generaciones, aumenta la mutación
 
 # Acciones posibles para un robot
 ACTIONS = ["move_forward", "move_backward", "turn_left", "turn_right", "shoot"]
-
+ 
 # Clase Robot
 class Robot:
     def __init__(self, genome):
@@ -197,16 +197,6 @@ def genetic_algorithm():
     plt.title("Mejor Fitness a lo largo de las generaciones")
     plt.xlabel("Generación")
     plt.ylabel("Mejor Fitness")
-    plt.show()
-
-    # Gráfico de mejor, peor y promedio fitness
-    plt.figure(figsize=(10, 6))
-    plt.plot(worst_fitness, label="Peor Fitness")
-    plt.plot(average_fitness, label="Fitness Promedio")
-    plt.title("Evolución del Fitness a lo largo de las generaciones")
-    plt.xlabel("Generación")
-    plt.ylabel("Fitness")
-    plt.legend()
     plt.show()
 
 
