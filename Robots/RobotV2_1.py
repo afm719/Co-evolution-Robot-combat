@@ -20,7 +20,7 @@
 #   2024-11-03
 #
 # LAST UPDATED:
-#   2024-12-01
+#   2024-12-03
 #
 # LICENSE:
 #   MIT License
@@ -33,7 +33,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Parámetros del algoritmo genético
+# Genetic algorithm parameters
 POPULATION_SIZE = 100
 GENOME_LENGTH = 10
 MUTATION_RATE = 0.03
@@ -43,7 +43,7 @@ MAX_GENERATIONS = 200
 ELITE_COUNT = 2
 NO_IMPROVEMENT_LIMIT = 10
 
-# Clase Robot con genoma y fitness
+
 class Robot:
     def __init__(self, genome=None):
         if genome is None:
@@ -51,37 +51,76 @@ class Robot:
         else:
             self.genome = genome
         self.fitness = 0
+        self.health = 100  
 
-# Inicialización de la población
+    def attack(self):
+        base_damage = np.sum(self.genome)  # Suma del genoma
+        random_factor = random.uniform(0.8, 1.2)  # Factor aleatorio para variar el daño
+        return int(base_damage * random_factor)
+
+    def move(self):
+        actions = ['turn left', 'turn right', 'move forward']
+        return random.choice(actions)
+
+    def battle(robot1, robot2):
+        print(f"Battle started between Robot 1 and Robot 2!\n")
+        round_number = 1
+        while robot1.health > 0 and robot2.health > 0:
+            print(f"Round {round_number}:")
+            damage1 = robot1.attack()
+            robot2.health -= damage1
+            print(f"Robot 1 attacks with {damage1} damage. Robot 2's health: {robot2.health}")
+
+            if robot2.health <= 0:
+                print("Robot 1 wins the battle!")
+                break
+
+            damage2 = robot2.attack()
+            robot1.health -= damage2
+            print(f"Robot 2 attacks with {damage2} damage. Robot 1's health: {robot1.health}")
+
+            if robot1.health <= 0:
+                print("Robot 2 wins the battle!")
+                break
+
+            
+            move1 = robot1.move()
+            move2 = robot2.move()
+            print(f"Robot 1 moves: {move1}")
+            print(f"Robot 2 moves: {move2}\n")
+
+            round_number += 1
+
+
 def initialize_population():
     return [Robot() for _ in range(POPULATION_SIZE)]
 
-# Evaluación de fitness (ajustada para garantizar valores positivos)
-def evaluate_fitness(robot):
-    # Fitness basado en la distancia al vector óptimo (1,1,...,1)
-    max_fitness_possible = GENOME_LENGTH * (2 ** 2)  # Máximo fitness posible
-    fitness_raw = max_fitness_possible - np.sum((robot.genome - 1) ** 2)
-    # Escalado para recompensar proporcionalmente
-    robot.fitness = fitness_raw / max_fitness_possible * 100  # Fitness en rango 0-100
 
-# Selección por torneo
+def evaluate_fitness(robot):
+    # Fitness based on distance to the optimal vector (1,1,...,1)
+    max_fitness_possible = GENOME_LENGTH * (2 ** 2)  # Maximum possible fitness
+    fitness_raw = max_fitness_possible - np.sum((robot.genome - 1) ** 2)
+    # Scale to reward proportionally
+    robot.fitness = fitness_raw / max_fitness_possible * 100  # Fitness in range 0-100
+
+
 def tournament_selection(population, tournament_size):
     tournament = random.sample(population, tournament_size)
     return max(tournament, key=lambda x: x.fitness)
 
-# Crossover (cruce)
+
 def crossover(parent1, parent2):
     crossover_point = random.randint(1, GENOME_LENGTH - 1)
     child_genome = np.concatenate((parent1.genome[:crossover_point], parent2.genome[crossover_point:]))
     return Robot(genome=child_genome)
 
-# Mutación
+
 def mutate(robot, mutation_rate):
     for i in range(len(robot.genome)):
         if random.random() < mutation_rate:
-            robot.genome[i] += np.random.normal(0, 0.1)  # Mutación ligera para evitar cambios drásticos
+            robot.genome[i] += np.random.normal(0, 0.1)  
 
-# Calcular diversidad genética (distancia media entre genomas)
+
 def calculate_genetic_diversity(population):
     genomes = np.array([robot.genome for robot in population])
     pairwise_distances = np.sum([np.linalg.norm(g1 - g2) for g1 in genomes for g2 in genomes])
@@ -93,49 +132,35 @@ def genetic_algorithm():
     average_fitness = []
     worst_fitness = []
     diversity = []
-    stagnant_generations = 0
-    last_best_fitness = -np.inf
     current_mutation_rate = MUTATION_RATE
 
     for generation in range(MAX_GENERATIONS):
-        # Evaluar fitness
+        # Evaluate fitness
         for robot in population:
             evaluate_fitness(robot)
 
-        # Ordenar población por fitness (descendente)
+        # Sort population by fitness (descending)
         population.sort(key=lambda x: x.fitness, reverse=True)
 
-        # Calcular métricas
-        best_fitness_current = population[0].fitness  # Mejor fitness
-        average_fitness_current = np.mean([robot.fitness for robot in population])
-        worst_fitness_current = min(robot.fitness for robot in population)
-        diversity_current = calculate_genetic_diversity(population)
-
-        # Registrar métricas
+        # Record metrics
+        best_fitness_current = population[0].fitness
         best_fitness.append(best_fitness_current)
+        average_fitness_current = np.mean([robot.fitness for robot in population])
         average_fitness.append(average_fitness_current)
+        diversity_current = calculate_genetic_diversity(population)
         diversity.append(diversity_current)
+        worst_fitness_current = min(robot.fitness for robot in population)
         worst_fitness.append(worst_fitness_current)
 
-        # Incrementar tasa de mutación si no hay mejora
-        if best_fitness_current <= last_best_fitness:
-            stagnant_generations += 1
-            if stagnant_generations >= NO_IMPROVEMENT_LIMIT:
-                current_mutation_rate = min(0.3, current_mutation_rate + 0.05)
-                stagnant_generations = 0
-                print(f"Incrementando la tasa de mutación a: {current_mutation_rate:.2f}")
-        else:
-            stagnant_generations = 0
+        # Show progress
+        print(f"Generation {generation}: Best Fitness = {best_fitness_current:.2f}")
 
-        if best_fitness_current > last_best_fitness:
-            last_best_fitness = best_fitness_current
-
-        # Detener si alcanzamos el fitness óptimo
+        # Stop if we reach optimal fitness
         if best_fitness_current >= 99.99:
-            print(f"Solución óptima encontrada en la generación {generation}: {best_fitness_current:.2f}")
+            print(f"Optimal solution found in generation {generation}: {best_fitness_current:.2f}")
             break
 
-        # Generar nueva población (elitismo + nueva generación)
+        # Generate new population (elitism + new generation)
         new_population = population[:ELITE_COUNT]
         while len(new_population) < POPULATION_SIZE:
             parent1 = tournament_selection(population, TOURNAMENT_SIZE)
@@ -151,43 +176,44 @@ def genetic_algorithm():
 
         population = new_population
 
-        # Mostrar progreso
-        print(f"Generación {generation}: Mejor Fitness = {best_fitness_current:.2f}")
+        # Show progress
+        print(f"Generation {generation}: Best Fitness = {best_fitness_current:.2f}")
 
-    # Graficar resultados
+    # Plot results
     plt.figure(figsize=(10, 6))
-    plt.plot(best_fitness, label="Mejor Fitness", color='blue')
-    plt.title("Mejor Fitness a lo largo de las generaciones")
-    plt.xlabel("Generación")
+    plt.plot(best_fitness, label="Best Fitness", color='blue')
+    plt.title("Best Fitness Over Generations")
+    plt.xlabel("Generation")
     plt.ylabel("Fitness")
     plt.legend()
     plt.show()
 
     plt.figure(figsize=(12, 6))
-    plt.plot(best_fitness, label="Mejor Fitness", color='blue')
-    plt.plot(average_fitness, label="Fitness Promedio", color='green')
-    plt.plot(worst_fitness, label="Peor Fitness", color='red')
-    plt.title("Evolución del Fitness a lo largo de las generaciones", fontsize=14)
-    plt.xlabel("Generación", fontsize=12)
+    plt.plot(best_fitness, label="Best Fitness", color='blue')
+    plt.plot(average_fitness, label="Average Fitness", color='green')
+    plt.plot(worst_fitness, label="Worst Fitness", color='red')
+    plt.title("Fitness Evolution Over Generations", fontsize=14)
+    plt.xlabel("Generation", fontsize=12)
     plt.ylabel("Fitness", fontsize=12)
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.show()
 
-
-    # Diversidad genética
+    # Genetic diversity
     plt.figure(figsize=(12, 6))
-    plt.plot(diversity, label="Diversidad Genética", color='purple')
-    plt.title("Evolución de la Diversidad Genética", fontsize=14)
-    plt.xlabel("Generación", fontsize=12)
-    plt.ylabel("Diversidad", fontsize=12)
+    plt.plot(diversity, label="Genetic Diversity", color='purple')
+    plt.title("Genetic Diversity Evolution", fontsize=14)
+    plt.xlabel("Generation", fontsize=12)
+    plt.ylabel("Diversity", fontsize=12)
     plt.grid(True, linestyle='--', alpha=0.7)
     plt.legend()
     plt.show()
 
+    # At the end of all generations, return the best population or the best robot.
+    best_robots = population[:2]  # The robots with the best fitness
+    worst_robots = population[-2:]  # The robots with the worst fitness
+    return best_robots, worst_robots
 
 
-
-# Ejecutar el algoritmo genético
 if __name__ == "__main__":
     genetic_algorithm()
