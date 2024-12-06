@@ -5,10 +5,10 @@
 #   A Python simulation of a "Robot Wars" environment where two 
 #   robots fight against each other. The winner is determined 
 #   by survival after executing strategies driven by genetic 
-#   programming (GP). The project includes:
+#   algorithms (GA). The project includes:
 #     - Actions: Move, shoot, etc.
 #     - Sensor inputs for real-time decision-making.
-#     - Co-evolution of GP individuals to control robot behaviors.
+#     - Co-evolution of GA individuals to control robot behaviors.
 #
 # AUTHOR:
 #   Arahi Fernandez Monagas
@@ -54,8 +54,8 @@ class Robot:
         self.health = 100  
 
     def attack(self):
-        base_damage = np.sum(self.genome)  # Suma del genoma
-        random_factor = random.uniform(0.8, 1.2)  # Factor aleatorio para variar el daño
+        base_damage = np.sum(self.genome)  
+        random_factor = random.uniform(0.8, 1.2)  
         return int(base_damage * random_factor)
 
     def move(self):
@@ -82,7 +82,6 @@ class Robot:
             if robot1.health <= 0:
                 print("Robot 2 wins the battle!")
                 break
-
             
             move1 = robot1.move()
             move2 = robot2.move()
@@ -177,37 +176,61 @@ def genetic_algorithm():
         population = new_population
 
         # Show progress
-        print(f"Generation {generation}: Best Fitness = {best_fitness_current:.2f}")
+        #print(f"Generation {generation}: Best Fitness = {best_fitness_current:.2f}")
 
     # Plot results
-    plt.figure(figsize=(10, 6))
-    plt.plot(best_fitness, label="Best Fitness", color='blue')
-    plt.title("Best Fitness Over Generations")
-    plt.xlabel("Generation")
-    plt.ylabel("Fitness")
-    plt.legend()
+    #--------------------------------------------------------#
+    plt.figure(figsize=(12, 6))
+
+    plt.plot(best_fitness, label="Best Fitness", color='darkgreen', linestyle='--', marker='o', markersize=6, markerfacecolor='green', markeredgewidth=2)
+
+    plt.title("Best Fitness Evolution Over Generations", fontsize=16, fontweight='bold', color='darkred')
+    plt.xlabel("Generation", fontsize=12, fontweight='bold')
+    plt.ylabel("Fitness", fontsize=12, fontweight='bold')
+
+    plt.gca().set_facecolor('#f0f0f0')  # Fondo gris claro
+    plt.grid(True, which='both', linestyle='-.', color='gray', alpha=0.7)
+
+    plt.legend(loc='upper left', fontsize=12, frameon=False, title="Fitness Metrics", title_fontsize=13)
+
+    plt.tight_layout()  
     plt.show()
 
-    plt.figure(figsize=(12, 6))
-    plt.plot(best_fitness, label="Best Fitness", color='blue')
-    plt.plot(average_fitness, label="Average Fitness", color='green')
-    plt.plot(worst_fitness, label="Worst Fitness", color='red')
-    plt.title("Fitness Evolution Over Generations", fontsize=14)
-    plt.xlabel("Generation", fontsize=12)
-    plt.ylabel("Fitness", fontsize=12)
-    plt.legend()
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.show()
+    # #--------------------------------------------------------#
 
-    # Genetic diversity
-    plt.figure(figsize=(12, 6))
-    plt.plot(diversity, label="Genetic Diversity", color='purple')
-    plt.title("Genetic Diversity Evolution", fontsize=14)
-    plt.xlabel("Generation", fontsize=12)
-    plt.ylabel("Diversity", fontsize=12)
-    plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
-    plt.show()
+    # plt.figure(figsize=(12, 6))
+    # plt.plot(best_fitness, label="Best Fitness", color='royalblue', linestyle='-', marker='o', markersize=6, markerfacecolor='yellow', markeredgewidth=2)
+    # plt.plot(average_fitness, label="Average Fitness", color='forestgreen', linestyle='--', marker='s', markersize=6, markerfacecolor='lime', markeredgewidth=2)
+    # plt.plot(worst_fitness, label="Worst Fitness", color='darkred', linestyle=':', linewidth=2)
+    # plt.title("Fitness Evolution Over Generations", fontsize=16, fontweight='bold', color='darkslategray')
+    # plt.xlabel("Generation", fontsize=14, fontweight='bold')
+    # plt.ylabel("Fitness", fontsize=14, fontweight='bold')
+    # plt.gca().set_facecolor('#f9f9f9')  # Fondo gris muy claro
+    # plt.grid(True, which='both', linestyle='--', color='lightgray', alpha=0.7)
+    # plt.legend(loc='upper right', fontsize=12, frameon=True, facecolor='lightblue', title="Fitness Metrics", title_fontsize=13)
+    # plt.tight_layout()
+    # plt.show()
+
+
+    # #--------------------------------------------------------#
+
+    # # Genetic diversity
+    # plt.figure(figsize=(12, 6))
+
+    # plt.plot(diversity, label="Genetic Diversity", color='indigo', linestyle='-', marker='D', markersize=6, markerfacecolor='yellow', markeredgewidth=2)
+
+    # plt.title("Genetic Diversity Evolution", fontsize=16, fontweight='bold', color='darkgreen')
+    # plt.xlabel("Generation", fontsize=14, fontweight='bold')
+    # plt.ylabel("Diversity", fontsize=14, fontweight='bold')
+
+    # plt.gca().set_facecolor('#f0f0f0')
+    # plt.grid(True, which='both', linestyle='-.', color='gray', alpha=0.7)
+
+    # plt.legend(loc='upper right', fontsize=12, frameon=True, facecolor='lightyellow', title="Diversity Metrics", title_fontsize=13)
+
+    # plt.tight_layout()
+
+    # plt.show()
 
     # At the end of all generations, return the best population or the best robot.
     best_robots = population[:2]  # The robots with the best fitness
