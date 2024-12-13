@@ -176,7 +176,7 @@ def genetic_algorithm():
         population = new_population
 
         # Show progress
-        #print(f"Generation {generation}: Best Fitness = {best_fitness_current:.2f}")
+        #print(f"Generation {generatcion}: Best Fitness = {best_fitness_current:.2f}")
 
     # Plot results
     #--------------------------------------------------------#

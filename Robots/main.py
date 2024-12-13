@@ -1,4 +1,4 @@
-from RobotV2_1 import genetic_algorithm, Robot
+from RobotV2_1_GA import genetic_algorithm, Robot
 
 
 def simulate_battles():
