@@ -1,188 +1,213 @@
 import random
-import math
+import numpy as np
 import matplotlib.pyplot as plt
 
-# Definición de la clase Node para el árbol de expresión
-class Node:
-    def __init__(self, operation=None, left=None, right=None, value=None):
-        self.operation = operation  # Operación que este nodo representa (ej. '+', '-', 'distancia')
-        self.left = left  # Hijo izquierdo
-        self.right = right  # Hijo derecho
-        self.value = value  # Si es un nodo hoja, tiene un valor (por ejemplo, posición o salud)
+# Parámetros del algoritmo genético
+POPULATION_SIZE = 100
+GENOME_LENGTH = 10  # Esto no será usado directamente en el GP, pero ayuda a definir el tamaño de los robots.
+MUTATION_RATE = 0.03
+CROSSOVER_RATE = 0.7
+TOURNAMENT_SIZE = 3
+MAX_GENERATIONS = 200
+ELITE_COUNT = 2
+NO_IMPROVEMENT_LIMIT = 10
+
+# Parâmetros de los árboles de decisiones
+TREE_DEPTH = 3  # Profundidad del árbol de decisión
+NUM_ACTIONS = 4  # Número de acciones posibles: 'turn left', 'turn right', 'move forward', 'shoot'
+
+
+class DecisionTree:
+    """ Clase para el árbol de decisión en los robots """
+    def __init__(self, depth=3):
+        self.depth = depth
+        self.tree = self.generate_tree(depth)
+
+    def generate_tree(self, depth):
+        """ Generar un árbol binario de decisión """
+        if depth == 0:
+            # Si la profundidad es 0, es una acción
+            return random.choice(['turn left', 'turn right', 'move forward', 'shoot'])
+        else:
+            # Nodo condicional con acción en ramas
+            left = self.generate_tree(depth - 1)
+            right = self.generate_tree(depth - 1)
+            return ('IF', random.random(), left, right)
 
     def evaluate(self, robot):
-        if self.operation:
-            left_value = self.left.evaluate(robot) if self.left else 0
-            right_value = self.right.evaluate(robot) if self.right else 0
-            
-            # Operaciones básicas con control
-            if self.operation == 'add':
-                return min(left_value + right_value, 5)  # Limita el valor sumado a 5
-            elif self.operation == 'subtract':
-                return max(left_value - right_value, -5)  # Limita el valor restado a -5
-            elif self.operation == 'multiply':
-                return min(left_value * right_value, 5)  # Limita el valor multiplicado a 5
-            elif self.operation == 'divide':
-                # Evita divisiones por cero, y limita el valor a 5
-                return min(left_value / right_value if right_value != 0 else 2, 5)
-            elif self.operation == 'distance':
-                if isinstance(left_value, tuple) and isinstance(right_value, tuple):
-                    return min(((left_value[0] - right_value[0])**2 + (left_value[1] - right_value[1])**2)**0.5, 5)  # Limita la distancia
-                return 0
+        """ Evaluar el comportamiento del robot según el árbol """
+        return self.evaluate_node(self.tree, robot)
+
+    def evaluate_node(self, node, robot):
+        """ Evaluar un nodo del árbol """
+        if isinstance(node, tuple) and node[0] == 'IF':
+            condition, left, right = node[1], node[2], node[3]
+            if robot.health > condition:  # Condición ejemplo
+                return self.evaluate_node(left, robot)
+            else:
+                return self.evaluate_node(right, robot)
         else:
-            # Devuelve valores según el nodo hoja
-            if self.value == 'position':
-                return robot.position[0]  # O ajusta según tu modelo
-            elif self.value == 'health':
-                return robot.health
-            elif self.value == 'enemy_position':
-                return robot.enemy_position[0]
-        return 0
+            return node  # Acción (p.ej., 'turn left')
 
-# Clase Robot
+
 class Robot:
-    def __init__(self, position, health, enemy_position):
-        self.position = position  # Example: (10, 20)
+    def __init__(self, health=100):
         self.health = health
-        self.enemy_position = enemy_position  # Example: (30, 40)
-        self.tree = None  # Expression tree
-        self.fitness = 0  # Initialize fitness to 0
-
-    def normalize_fitness(self, value, min_value=0, max_value=100):
-        first_selection = max(value, min_value)
-        second_selection = min(first_selection, max_value)
-        return second_selection
-    
-    def evaluate_fitness(self):
-        if self.tree is not None:
-            raw_fitness = self.tree.evaluate(self)
-            normalized_fitness = self.normalize_fitness(raw_fitness)
-            self.fitness = normalized_fitness
-            return self.fitness
+        self.tree = DecisionTree(depth=TREE_DEPTH)  # Usamos árboles de decisión con una profundidad de 3
         self.fitness = 0
-        return self.fitness
 
-# Función de suavizado de fitness (promedio móvil)
-def smooth_fitness(fitness_list, smoothing_factor=0.05):
-    if len(fitness_list) < 2:
-        return fitness_list[-1] if fitness_list else 0
-    return fitness_list[-1] * smoothing_factor + fitness_list[-2] * (1 - smoothing_factor)
+    def attack(self):
+        """ Simula un ataque """
+        base_damage = np.sum(self.tree.evaluate(self))  # Calculamos daño con el árbol
+        random_factor = random.uniform(0.8, 1.2)
+        return int(base_damage * random_factor)
 
-# Función para generar un árbol de operaciones aleatorio
-def generate_random_tree():
-    operations = ['add', 'subtract', 'multiply', 'distance']
-    value_choices = ['position', 'health', 'enemy_position']
-    
-    # Árbol simple con nodos de operación
-    if random.random() < 0.5:  # Crear un nodo hoja
-        value = random.choice(value_choices)
-        return Node(value=value)
-    else:  # Crear un nodo de operación
-        operation = random.choice(operations)
-        left = generate_random_tree()
-        right = generate_random_tree()
-        return Node(operation=operation, left=left, right=right)
-    
-# Función de cruce
+    def move(self):
+        """ El robot realiza un movimiento determinado por su árbol de decisión """
+        return self.tree.evaluate(self)
+
+
+def initialize_population():
+    """ Inicializar la población con robots y sus árboles de decisión """
+    return [Robot() for _ in range(POPULATION_SIZE)]
+
+
+# Evaluación del fitness (modificación para mejorar la penalización)
+def evaluate_fitness(robot, enemy_robot):
+    robot_health = robot.health
+    enemy_health = enemy_robot.health
+    actions_taken = 0
+
+    for _ in range(10):  # Número de pasos en el combate
+        if robot.execute_actions(enemy_robot.position):
+            enemy_health -= 10
+            actions_taken += 1
+        if enemy_robot.execute_actions(robot.position):
+            robot_health -= 10
+
+    # Cálculo del fitness con penalización por la salud
+    robot.fitness = max(0, robot_health - enemy_health) + actions_taken
+    # Limitar el valor máximo del fitness a 100
+    robot.fitness = min(robot.fitness, 100)
+    return robot.fitness
+
+
+def tournament_selection(population, tournament_size):
+    """ Selección por torneo para elegir a un robot """
+    tournament = random.sample(population, tournament_size)
+    return max(tournament, key=lambda x: x.fitness)
+
+
 def crossover(parent1, parent2):
-    if random.random() > 0.5:
-        return parent1
-    else:
-        return parent2
+    """ Cruzamiento de árboles de decisión de dos robots """
+    crossover_point = random.randint(1, TREE_DEPTH - 1)
+    child_tree = parent1.tree if random.random() < CROSSOVER_RATE else parent2.tree
+    return Robot(health=parent1.health), child_tree
 
-# Función de mutación
-def mutate(tree):
-    if random.random() < 0.05:  # Reducción de la tasa de mutación
-        return generate_random_tree()  # Reemplazar por un nuevo árbol
-    return tree
 
-# Función de selección por torneo
-def tournament_selection(population, tournament_size=3):
-    selected = random.sample(population, tournament_size)
-    selected.sort(key=lambda robot: robot.fitness, reverse=True)
-    return selected[0]  # El mejor del torneo
+def mutate(robot, mutation_rate):
+    """ Aplicar mutaciones a un robot """
+    if random.random() < mutation_rate:
+        robot.tree = DecisionTree(depth=TREE_DEPTH)  # Reemplazar árbol de decisión
+        robot.health = random.uniform(50, 100)  # Modificar salud
+
+
+def calculate_genetic_diversity(population):
+    """ Calcular la diversidad genética de la población mediante la similitud estructural de los árboles """
+    pairwise_distances = 0
+    comparisons = 0
+
+    # Comparamos los árboles de decisión de todos los robots en la población
+    for i, robot1 in enumerate(population):
+        for j, robot2 in enumerate(population):
+            if i < j:
+                # Comparamos los árboles de decisión de robot1 y robot2 en base a sus evaluaciones
+                # En lugar de calcular la distancia de los árboles, comparamos las acciones que toman
+                actions1 = simulate_robot_actions(robot1)
+                actions2 = simulate_robot_actions(robot2)
+
+                # Contamos cuántas veces coinciden las acciones tomadas en la simulación
+                similarity = sum(1 for a1, a2 in zip(actions1, actions2) if a1 == a2)
+                pairwise_distances += similarity
+                comparisons += 1
+
+    # La diversidad genética es la media de las similitudes entre todos los pares de robots
+    return 1 - (pairwise_distances / comparisons) if comparisons > 0 else 0
+
+def simulate_robot_actions(robot, steps=10):
+    """ Simula las acciones de un robot durante 'steps' pasos para obtener un conjunto de decisiones """
+    actions = []
+    for _ in range(steps):
+        action = robot.tree.evaluate(robot)  # Ejecuta el árbol de decisiones del robot
+        actions.append(action)
+    return actions
+
 
 def genetic_algorithm():
-    population_size = 10
-    generations = 100
-    mutation_rate = 0.05  # Tasa de mutación más baja para un cambio gradual
-    crossover_rate = 0.7  # Tasa de cruce adecuada
-    best_fitness = 0  # Inicializa el mejor fitness
-    best_fitness_current = []
-    
-    # Inicializar la población de robots
-    population = []
-    for _ in range(population_size):
-        position = (random.randint(0, 100), random.randint(0, 100))
-        health = random.randint(1, 100)
-        enemy_position = (random.randint(0, 100), random.randint(0, 100))
-        robot = Robot(position=position, health=health, enemy_position=enemy_position)
-        robot.tree = generate_random_tree()  # Asignar un árbol de operaciones aleatorio
-        population.append(robot)
-    
-    # Evolución de la población
-    for generation in range(generations):
-        print(f"Generación {generation}:")
-        
-        generation_best_fitness = 0  # El mejor fitness de la generación actual
-        
+    """ Algoritmo Genético para evolucionar robots con árboles de decisión """
+    population = initialize_population()
+    best_fitness = []
+    average_fitness = []
+    worst_fitness = []
+    diversity = []
+
+    for generation in range(MAX_GENERATIONS):
+        # Evaluar el fitness de cada robot
         for robot in population:
-            robot_fitness = robot.evaluate_fitness()
-            # Aplicar suavizado del fitness para evitar fluctuaciones grandes
-            if robot_fitness > generation_best_fitness:
-                generation_best_fitness = robot_fitness
-                if generation_best_fitness > best_fitness:
-                    best_fitness = generation_best_fitness
-        
-        # Suavizar la evolución del fitness
-        best_fitness_current.append(smooth_fitness(best_fitness_current))
-        
-        print(f"Generación {generation}: Mejor Fitness = {generation_best_fitness}")
-        
-        # Selección de los mejores robots para la próxima generación mediante torneo
-        new_population = []
-        for _ in range(population_size):
-            parent1 = tournament_selection(population)
-            parent2 = tournament_selection(population)
+            evaluate_fitness(robot)
 
-            if random.random() < crossover_rate:
-                child_tree = crossover(parent1.tree, parent2.tree)
-            else:
-                child_tree = parent1.tree
+        # Ordenar robots por fitness (de mayor a menor)
+        population.sort(key=lambda x: x.fitness, reverse=True)
 
-            child_tree = mutate(child_tree)
-            child_position = (random.randint(0, 100), random.randint(0, 100))
-            child_health = random.randint(1, 100)
-            child_enemy_position = (random.randint(0, 100), random.randint(0, 100))
-            
-            child_robot = Robot(position=child_position, health=child_health, enemy_position=child_enemy_position)
-            child_robot.tree = child_tree
-            new_population.append(child_robot)
+        # Registrar métricas
+        best_fitness_current = population[0].fitness
+        best_fitness.append(best_fitness_current)
+        average_fitness_current = np.mean([robot.fitness for robot in population])
+        average_fitness.append(average_fitness_current)
+        diversity_current = calculate_genetic_diversity(population)
+        diversity.append(diversity_current)
+        worst_fitness_current = min(robot.fitness for robot in population)
+        worst_fitness.append(worst_fitness_current)
 
-        population = new_population  # Actualiza la población para la siguiente generación
+        # Mostrar progreso
+        print(f"Generación {generation}: Mejor Fitness = {best_fitness_current:.2f}")
 
-        # Detener si alcanzamos un fitness suficientemente alto
-        if best_fitness >= 99.99:
-            print("¡Se alcanzó el fitness máximo!")
+        # Detener si alcanzamos un fitness óptimo
+        if best_fitness_current >= 99.99:
+            print(f"Solución óptima encontrada en la generación {generation}: {best_fitness_current:.2f}")
             break
 
-    # Graficar el progreso del mejor fitness
+        # Generar nueva población (elitismo + nueva generación)
+        new_population = population[:ELITE_COUNT]
+        while len(new_population) < POPULATION_SIZE:
+            parent1 = tournament_selection(population, TOURNAMENT_SIZE)
+            parent2 = tournament_selection(population, TOURNAMENT_SIZE)
+
+            if random.random() < CROSSOVER_RATE:
+                child = crossover(parent1, parent2)
+            else:
+                child = Robot(parent1.health)
+
+            mutate(child, MUTATION_RATE)
+            new_population.append(child)
+
+        population = new_population
+
+    # Graficar resultados
     plt.figure(figsize=(12, 6))
-    plt.plot(best_fitness_current, label="Best Fitness", color='darkgreen', linestyle='--', marker='o', markersize=6, markerfacecolor='green', markeredgewidth=2)
-
+    plt.plot(best_fitness, label="Best Fitness", color='darkgreen', linestyle='--', marker='o', markersize=6, markerfacecolor='green', markeredgewidth=2)
     plt.title("Best Fitness Evolution Over Generations", fontsize=16, fontweight='bold', color='darkred')
-    plt.xlabel("Generation", fontsize=12, fontweight='bold')
+    plt.xlabel("Generación", fontsize=12, fontweight='bold')
     plt.ylabel("Fitness", fontsize=12, fontweight='bold')
-
-    plt.gca().set_facecolor('#f0f0f0')  # Fondo gris claro
     plt.grid(True, which='both', linestyle='-.', color='gray', alpha=0.7)
-
-    plt.legend(loc='upper left', fontsize=12, frameon=False, title="Fitness Metrics", title_fontsize=13)
-
     plt.tight_layout()  
     plt.show()
 
-    print(f"Mejor fitness final: {best_fitness}")
+    # Devolver los mejores robots
+    best_robots = population[:2]  # Los robots con el mejor fitness
+    worst_robots = population[-2:]  # Los robots con el peor fitness
+    return best_robots, worst_robots
 
-# Llamar a la función para ejecutar el algoritmo genético
-genetic_algorithm()
+
+if __name__ == "__main__":
+    genetic_algorithm()
