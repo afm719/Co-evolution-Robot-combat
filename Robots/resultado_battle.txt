@@ -1,0 +1,65 @@
+Battle started between Robot 1 and Robot 2!
+
+Round 1:
+Robot 1 attacks with 11 damage. Robot 2's health: 89
+Robot 2 attacks with 9 damage. Robot 1's health: 91
+Robot 1 moves: turn right
+Robot 2 moves: turn left
+
+Round 2:
+Robot 1 attacks with 8 damage. Robot 2's health: 81
+Robot 2 attacks with 10 damage. Robot 1's health: 81
+Robot 1 moves: move forward
+Robot 2 moves: turn left
+
+Round 3:
+Robot 1 attacks with 9 damage. Robot 2's health: 72
+Robot 2 attacks with 11 damage. Robot 1's health: 70
+Robot 1 moves: turn left
+Robot 2 moves: move forward
+
+Round 4:
+Robot 1 attacks with 9 damage. Robot 2's health: 63
+Robot 2 attacks with 9 damage. Robot 1's health: 61
+Robot 1 moves: turn left
+Robot 2 moves: move forward
+
+Round 5:
+Robot 1 attacks with 9 damage. Robot 2's health: 54
+Robot 2 attacks with 8 damage. Robot 1's health: 53
+Robot 1 moves: move forward
+Robot 2 moves: turn right
+
+Round 6:
+Robot 1 attacks with 8 damage. Robot 2's health: 46
+Robot 2 attacks with 9 damage. Robot 1's health: 44
+Robot 1 moves: move forward
+Robot 2 moves: turn right
+
+Round 7:
+Robot 1 attacks with 8 damage. Robot 2's health: 38
+Robot 2 attacks with 11 damage. Robot 1's health: 33
+Robot 1 moves: turn right
+Robot 2 moves: move forward
+
+Round 8:
+Robot 1 attacks with 10 damage. Robot 2's health: 28
+Robot 2 attacks with 10 damage. Robot 1's health: 23
+Robot 1 moves: move forward
+Robot 2 moves: turn left
+
+Round 9:
+Robot 1 attacks with 11 damage. Robot 2's health: 17
+Robot 2 attacks with 9 damage. Robot 1's health: 14
+Robot 1 moves: turn left
+Robot 2 moves: turn right
+
+Round 10:
+Robot 1 attacks with 9 damage. Robot 2's health: 8
+Robot 2 attacks with 8 damage. Robot 1's health: 6
+Robot 1 moves: turn left
+Robot 2 moves: turn left
+
+Round 11:
+Robot 1 attacks with 10 damage. Robot 2's health: -2
+Robot 1 wins the battle!

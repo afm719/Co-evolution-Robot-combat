@@ -5,11 +5,12 @@ import concurrent.futures
 import copy
 
 # Parámetros de la evolución
-POPULATION_SIZE = 50
-NUM_GENERATIONS = 100
+POPULATION_SIZE = 100
+
+NUM_GENERATIONS = 200
 MUTATION_RATE = 0.1
 STAGNATION_THRESHOLD = 5
-
+BEST_SOLUTIONS = []
 # Definición de la clase Node para el árbol de expresión
 class Node:
     def __init__(self, operation=None, left=None, right=None, value=None):
@@ -61,7 +62,8 @@ class Robot:
             distance_to_enemy = max(0, 1 - (abs(self.enemy_position[0] - self.position[0]) + abs(self.enemy_position[1] - self.position[1])) / 2)
 
             # Penalización por complejidad del árbol
-            complexity_penalty = len(tree_to_string(self.tree)) / 100.0
+            complexity_penalty = (len(tree_to_string(self.tree)) / 50.0)  # Penalización más fuerte
+
 
             # Calcular el fitness total con ponderaciones balanceadas
             raw_fitness = 1 - (0.4 * distance_to_goal + 0.4 * health_penalty + 0.2 * distance_to_enemy + complexity_penalty)
@@ -112,9 +114,7 @@ def evaluate_population_fitness(population):
         fitness_scores = list(executor.map(lambda robot: robot.evaluate_fitness(), population))
     return fitness_scores
 
-# Métodos de selección, cruce y mutación
-
-def tournament_selection(population, fitness_scores, tournament_size=20):  # Aumento del tamaño del torneo
+def tournament_selection(population, fitness_scores, tournament_size=5):  # Aumento del tamaño del torneo
     tournament = random.sample(list(zip(population, fitness_scores)), tournament_size)
     winner = max(tournament, key=lambda x: x[1])
     return winner[0]
@@ -125,69 +125,16 @@ def elitism_selection(population, fitness_scores, elite_fraction=0.1):
     elites = [ind for ind, _ in sorted_population[:num_elites]]
     return elites
 
-def crossover_trees_simple(tree1, tree2):
-    if random.random() < 0.7:
-        new_tree1 = Node(
-            operation=tree1.operation, 
-            left=tree2.left,
-            right=tree1.right,
-            value=tree1.value
-        )
-        new_tree2 = Node(
-            operation=tree2.operation, 
-            left=tree1.left, 
-            right=tree2.right,
-            value=tree2.value
-        )
-    else:
-        new_tree1 = Node(
-            operation=tree1.operation, 
-            left=tree1.left, 
-            right=tree2.right,
-            value=tree1.value
-        )
-        new_tree2 = Node(
-            operation=tree2.operation, 
-            left=tree2.left, 
-            right=tree1.right,
-            value=tree2.value
-        )
-    return new_tree1, new_tree2
-
-def crossover(parent1, parent2):
-    child1_tree, child2_tree = crossover_trees_simple(parent1.tree, parent2.tree)
-    child1 = Robot(position=parent1.position, health=parent1.health, enemy_position=parent1.enemy_position)
-    child1.tree = child1_tree
-    child2 = Robot(position=parent2.position, health=parent2.health, enemy_position=parent2.enemy_position)
-    child2.tree = child2_tree
-
-    return child1, child2
-
-def mutate(individual, mutation_rate=0.1):
-    if random.random() < mutation_rate:
-        return random.uniform(-1, 1)  # Aumenta el rango de valores mutables
-    return individual
-
-def diversify_population(population, fitness_scores, mutation_rate=0.5):  # Aumentamos la tasa de mutación
-    diversified_population = []
-    for i in range(len(population)):
-        if random.random() < 0.6:  # Aumentamos la probabilidad de que un individuo sea completamente nuevo
-            new_robot = Robot(
-                position=[random.uniform(0, 1), random.uniform(0, 1)],
-                health=random.uniform(0, 1),
-                enemy_position=[random.uniform(0, 1), random.uniform(0, 1)]
-            )
-            new_robot.tree = generate_random_tree(max_depth=random.randint(5, 7))
-            diversified_population.append(new_robot)
-        else:
-            clone = copy.deepcopy(population[i])
-            mutate(clone, mutation_rate)  # Aplicar mutación más fuerte
-            diversified_population.append(clone)
-    return diversified_population
-
 def partial_reinitialization(population, fitness_scores, reinit_fraction=0.5):  # Aumentada a 50%
     num_to_reinit = int(len(population) * reinit_fraction)
-    indices_to_reinit = random.sample(range(len(population)), num_to_reinit)
+    
+    # Ordenar los individuos según su fitness (ascendente)
+    sorted_indices = sorted(range(len(fitness_scores)), key=lambda i: fitness_scores[i])
+    
+    # Seleccionar los peores individuos para reinicialización
+    indices_to_reinit = sorted_indices[:num_to_reinit]
+    
+    # Reinicializar individuos seleccionados
     for idx in indices_to_reinit:
         population[idx] = Robot(
             position=[random.uniform(0, 1), random.uniform(0, 1)],
@@ -195,41 +142,86 @@ def partial_reinitialization(population, fitness_scores, reinit_fraction=0.5):  
             enemy_position=[random.uniform(0, 1), random.uniform(0, 1)]
         )
         population[idx].tree = generate_random_tree()
+    
     return population
 
-def deeper_mutate(individual, mutation_rate=0.3):
-    # Mutación más profunda en la estructura del árbol
+def deeper_mutate(individual, mutation_rate=0.05):
+    """Mutación agresiva que reemplaza subárboles completos."""
     if random.random() < mutation_rate:
-        # Seleccionar aleatoriamente un nodo para cambiar
-        node_to_mutate = individual.tree
-        # Asegúrese de que el nodo no sea None y sigue el recorrido en el árbol
-        while node_to_mutate:
-            if random.random() < 0.5:
-                # Si hay un hijo izquierdo, descendemos en él
-                if node_to_mutate.left:
-                    node_to_mutate = node_to_mutate.left
-                else:
-                    break  # Si no tiene hijo izquierdo, salimos
-            else:
-                # Si hay un hijo derecho, descendemos en él
-                if node_to_mutate.right:
-                    node_to_mutate = node_to_mutate.right
-                else:
-                    break  # Si no tiene hijo derecho, salimos
+        # Selecciona un subárbol al azar para mutar
+        subtree_to_mutate = random_subtree(individual.tree)
+        
+        # Genera un nuevo subárbol para reemplazar el subárbol seleccionado
+        new_subtree = generate_random_tree(depth=0, max_depth=3)  # Árbol pequeño
+        
+        # Reemplaza el subárbol seleccionado con el nuevo subárbol
+        if subtree_to_mutate is individual.tree:  # Si el subárbol a mutar es la raíz
+            individual.tree = new_subtree
+        else:
+            replace_subtree(individual.tree, subtree_to_mutate, new_subtree)
 
-        # Cambiar el nodo seleccionado por un subárbol completamente nuevo
-        if node_to_mutate:
-            node_to_mutate = generate_random_tree(max_depth=random.randint(3, 5))  # Profundidad más pequeña para evitar árboles demasiado grandes
-            individual.tree = node_to_mutate  # Asignamos el nuevo subárbol al individuo
-
+def replace_subtree(root, old_subtree, new_subtree):
+    """Reemplaza un subárbol viejo por un nuevo subárbol en el árbol dado."""
+    if root is None:
+        return None
+    
+    if root == old_subtree:
+        return new_subtree  # Reemplaza el subárbol antiguo con el nuevo
+    
+    # Recurre en los subárboles izquierdo y derecho
+    if root.left:
+        root.left = replace_subtree(root.left, old_subtree, new_subtree)
+    if root.right:
+        root.right = replace_subtree(root.right, old_subtree, new_subtree)
+    
+    return root
 
 def crossover_trees_with_subtrees(tree1, tree2):
-    # Intercambiar subárboles aleatorios
+    if tree1 is None or tree2 is None:
+        return tree1, tree2
+
     if random.random() < 0.7:
-        subtree1, subtree2 = random.choice([tree1, tree2]), random.choice([tree1, tree2])
-        # Hacer el cruce de subárboles completos
-        subtree1, subtree2 = subtree2, subtree1  # Simplemente intercambiamos los subárboles seleccionados
+        # Selecciona subárboles profundos al azar
+        subtree1 = random_subtree(tree1)
+        subtree2 = random_subtree(tree2)
+        # Intercambia los subárboles
+        subtree1, subtree2 = subtree2, subtree1
     return tree1, tree2
+
+def random_subtree(tree, depth=0, max_depth=5):
+    """Selecciona un subárbol al azar."""
+    if depth > max_depth or tree is None:
+        return tree
+    if random.random() < 0.5 and tree.left:
+        return random_subtree(tree.left, depth+1)
+    elif tree.right:
+        return random_subtree(tree.right, depth+1)
+    return tree
+
+def calculate_population_diversity(population):
+    """Calcula una medida de diversidad basada en la diferencia entre árboles."""
+    unique_trees = set(tree_to_string(robot.tree) for robot in population)
+    return len(unique_trees) / len(population)
+
+def adjust_mutation_rate(current_rate, diversity, threshold=0.2):
+    """Ajusta la tasa de mutación dinámicamente según la diversidad."""
+    if diversity < threshold:  # Si la diversidad es baja
+        return min(0.6, current_rate * 1.5)  # Aumenta la tasa de mutación
+    return max(0.1, current_rate * 0.8)  # Reduce si hay suficiente diversidad
+
+def diversify_based_on_fitness(population, fitness_scores, threshold=0.01):
+    """Diversifica población si la desviación del fitness es muy baja."""
+    std_fitness = np.std(fitness_scores)
+    if std_fitness < threshold:  # Detecta convergencia en fitness
+        print("Baja desviación estándar de fitness, reinicializando parte de la población...")
+        return partial_reinitialization(population, fitness_scores, reinit_fraction=0.5)
+    return population
+
+
+def update_best_solutions(best_individual, fitness, max_size=5):
+    global BEST_SOLUTIONS
+    BEST_SOLUTIONS.append((copy.deepcopy(best_individual), fitness))
+    BEST_SOLUTIONS = sorted(BEST_SOLUTIONS, key=lambda x: x[1], reverse=True)[:max_size]
 
 def run_evolution():
     population = initialize_population()
@@ -240,36 +232,43 @@ def run_evolution():
     for generation in range(NUM_GENERATIONS):
         print(f"Generación {generation + 1}/{NUM_GENERATIONS}")
 
+        # Evaluar fitness de la población
         fitness_scores = evaluate_population_fitness(population)
 
         max_fitness = max(fitness_scores)
         best_individual = population[fitness_scores.index(max_fitness)]
 
         print(f"Mejor fitness de esta generación: {max_fitness:.5f}")
-
         fitness_over_time.append(max_fitness)
+        # Actualizar el registro de las mejores soluciones
+        update_best_solutions(best_individual, max_fitness)
 
-        # Detectar estancamiento por fitness
+        # Calcular diversidad y ajustar la tasa de mutación
+        diversity = calculate_population_diversity(population)
+        mutation_rate = adjust_mutation_rate(mutation_rate, diversity)
+        print(f"Diversidad actual: {diversity:.2f}, Tasa de mutación ajustada: {mutation_rate:.2f}")
+
+        # Detectar estancamiento
         if stagnation_counter >= STAGNATION_THRESHOLD:
-            mutation_rate = min(0.6, mutation_rate * 1.5)  # Aumentar aún más la tasa de mutación
+            mutation_rate = min(0.6, mutation_rate * 1.5)
             stagnation_counter = 0
             print("Aumentando tasa de mutación debido al estancamiento...")
 
+        # Selección de élites
         elites = elitism_selection(population, fitness_scores)
         new_population = []
 
+        # Generación de nueva población
         while len(new_population) < POPULATION_SIZE - len(elites):
             parent1 = tournament_selection(population, fitness_scores)
             parent2 = tournament_selection(population, fitness_scores)
 
-            # Usar crossover de subárboles
             child1_tree, child2_tree = crossover_trees_with_subtrees(parent1.tree, parent2.tree)
             child1 = Robot(position=parent1.position, health=parent1.health, enemy_position=parent1.enemy_position)
             child1.tree = child1_tree
             child2 = Robot(position=parent2.position, health=parent2.health, enemy_position=parent2.enemy_position)
             child2.tree = child2_tree
 
-            # Mutar con mutación profunda
             deeper_mutate(child1, mutation_rate)
             deeper_mutate(child2, mutation_rate)
 
@@ -278,17 +277,27 @@ def run_evolution():
 
         population = elites + new_population
 
-        # Diversificar población y realizar reinicialización parcial
-        population = diversify_population(population, fitness_scores)
+        # **Ajuste dinámico del umbral de diversificación**
+        dynamic_threshold = 0.05 if generation > NUM_GENERATIONS // 2 else 0.01
+        std_fitness = np.std(fitness_scores)  # Calculamos la desviación estándar de los fitness
+        if std_fitness < dynamic_threshold:
+            print("Diversificación necesaria...")
+            population = partial_reinitialization(population, fitness_scores, reinit_fraction=0.3)
+
+        # Diversificación adicional y reinicialización
+        population = diversify_based_on_fitness(population, fitness_scores)
         population = partial_reinitialization(population, fitness_scores)
 
-        # Detectar estancamiento
+        # Estancamiento
         if max_fitness == max(fitness_scores):
             stagnation_counter += 1
         else:
             stagnation_counter = 0
 
     plot_fitness(fitness_over_time)
+
+
+
 
 import matplotlib.pyplot as plt
 

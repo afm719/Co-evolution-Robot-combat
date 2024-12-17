@@ -152,11 +152,11 @@ def genetic_algorithm():
         worst_fitness.append(worst_fitness_current)
 
         # Show progress
-        print(f"Generation {generation}: Best Fitness = {best_fitness_current:.5f}")
+        #print(f"Generation {generation}: Best Fitness = {best_fitness_current:.5f}")
 
         # Stop if we reach optimal fitness
         if best_fitness_current >= 99.99:
-            print(f"Optimal solution found in generation {generation}: {best_fitness_current:.4f}")
+            #print(f"Optimal solution found in generation {generation}: {best_fitness_current:.4f}")
             break
 
         # Generate new population (elitism + new generation)
@@ -180,21 +180,21 @@ def genetic_algorithm():
 
     # Plot results
     #--------------------------------------------------------#
-    plt.figure(figsize=(12, 6))
+    # plt.figure(figsize=(12, 6))
 
-    plt.plot(best_fitness, label="Best Fitness", color='darkgreen', linestyle='--', marker='o', markersize=6, markerfacecolor='green', markeredgewidth=2)
+    # plt.plot(best_fitness, label="Best Fitness", color='darkgreen', linestyle='--', marker='o', markersize=6, markerfacecolor='green', markeredgewidth=2)
 
-    plt.title("Best Fitness Evolution Over Generations", fontsize=16, fontweight='bold', color='darkred')
-    plt.xlabel("Generation", fontsize=12, fontweight='bold')
-    plt.ylabel("Fitness", fontsize=12, fontweight='bold')
+    # plt.title("Best Fitness Evolution Over Generations", fontsize=16, fontweight='bold', color='darkred')
+    # plt.xlabel("Generation", fontsize=12, fontweight='bold')
+    # plt.ylabel("Fitness", fontsize=12, fontweight='bold')
 
-    plt.gca().set_facecolor('#f0f0f0')  # Fondo gris claro
-    plt.grid(True, which='both', linestyle='-.', color='gray', alpha=0.7)
+    # plt.gca().set_facecolor('#f0f0f0')  # Fondo gris claro
+    # plt.grid(True, which='both', linestyle='-.', color='gray', alpha=0.7)
 
-    plt.legend(loc='upper left', fontsize=12, frameon=False, title="Fitness Metrics", title_fontsize=13)
+    # plt.legend(loc='upper left', fontsize=12, frameon=False, title="Fitness Metrics", title_fontsize=13)
 
-    plt.tight_layout()  
-    plt.show()
+    # plt.tight_layout()  
+    # plt.show()
 
     # #--------------------------------------------------------#
 
