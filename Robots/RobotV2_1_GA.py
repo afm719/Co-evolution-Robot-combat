@@ -152,11 +152,11 @@ def genetic_algorithm():
         worst_fitness.append(worst_fitness_current)
 
         # Show progress
-        print(f"Generation {generation}: Best Fitness = {best_fitness_current:.2f}")
+        print(f"Generation {generation}: Best Fitness = {best_fitness_current:.5f}")
 
         # Stop if we reach optimal fitness
         if best_fitness_current >= 99.99:
-            print(f"Optimal solution found in generation {generation}: {best_fitness_current:.2f}")
+            print(f"Optimal solution found in generation {generation}: {best_fitness_current:.4f}")
             break
 
         # Generate new population (elitism + new generation)

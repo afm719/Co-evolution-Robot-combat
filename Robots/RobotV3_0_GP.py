@@ -3,6 +3,12 @@ import matplotlib.pyplot as plt
 import copy
 import numpy as np
 
+# Parámetros de la evolución
+POPULATION_SIZE = 20
+NUM_GENERATIONS = 100
+MUTATION_RATE = 0.1
+STAGNATION_THRESHOLD = 2
+
 # Definición de la clase Node para el árbol de expresión
 class Node:
     def __init__(self, operation=None, left=None, right=None, value=None):
@@ -46,7 +52,6 @@ class Robot:
 
     def evaluate_fitness(self):
         if self.tree:
-            # Evaluar el árbol de decisión
             raw_fitness = self.tree.evaluate(self)
 
             # Componentes de la evaluación: Distancia al objetivo, salud, distancia al enemigo
@@ -66,8 +71,6 @@ class Robot:
         
         self.fitness = 0
         return self.fitness
-
-
 
 OPERATORS = ['add', 'subtract', 'multiply', 'divide']
 
@@ -116,18 +119,17 @@ def evaluate_population_fitness(population):
     fitness_scores = [robot.evaluate_fitness() for robot in population]
     return fitness_scores
 
-def tournament_selection(population, fitness_scores, diversity_factor=0.3, tournament_size=5):
+def tournament_selection(population, fitness_scores, diversity_factor=0.3, tournament_size=7):  # Aumentamos a 7
     tournament = random.sample(list(zip(population, fitness_scores)), tournament_size)
-    # Favorece el fitness, pero también selecciona individuos genéticamente diversos
     winner = max(tournament, key=lambda x: x[1] * (1 - diversity_factor) + calculate_genetic_diversity([x[0]]) * diversity_factor)
     return winner[0]
+
 
 def elitism_selection(population, fitness_scores, elite_fraction=0.1):
     num_elites = max(1, int(len(population) * elite_fraction))
     sorted_population = sorted(zip(population, fitness_scores), key=lambda x: x[1], reverse=True)
     elites = [ind for ind, _ in sorted_population[:num_elites]]
     return elites
-
 
 def crossover_trees_simple(tree1, tree2):
     if not isinstance(tree1, Node) or not isinstance(tree2, Node):
@@ -161,13 +163,13 @@ def crossover_trees_simple(tree1, tree2):
         )
     return new_tree1, new_tree2
 
+
 def crossover_trees(tree1, tree2):
-    # Cruce multipunto
     if random.random() < 0.7:
         new_tree1 = copy.deepcopy(tree1)
         new_tree2 = copy.deepcopy(tree2)
 
-        # Intercambiar subárboles aleatorios
+        # Intercambiar subárboles aleatorios con mayor variabilidad
         if new_tree1.left and new_tree2.left:
             new_tree1.left, new_tree2.left = new_tree2.left, new_tree1.left
         if new_tree1.right and new_tree2.right:
@@ -175,8 +177,9 @@ def crossover_trees(tree1, tree2):
 
         return new_tree1, new_tree2
     else:
-        # Cruce simple (como antes)
         return crossover_trees_simple(tree1, tree2)
+
+
 
 def crossover(parent1, parent2):
     if not isinstance(parent1, Robot) or not isinstance(parent2, Robot):
@@ -195,17 +198,15 @@ def crossover(parent1, parent2):
 
 def mutate(robot, mutation_rate):
     if random.random() < mutation_rate:
-        # Mutar de forma agresiva (reemplazar el árbol completo ocasionalmente)
         if random.random() < 0.5:
             robot.tree = generate_random_tree(max_depth=random.randint(3, 5))
         else:
             robot.tree = mutate_tree_node(robot.tree)
-            
+
 def diversify_population(population, fitness_scores):
     diversified_population = []
     for i in range(len(population)):
-        if random.random() < 0.5:
-            # Crear un nuevo robot aleatorio
+        if random.random() < 0.7:
             new_robot = Robot(
                 position=[random.uniform(0, 1), random.uniform(0, 1)],
                 health=random.uniform(0, 1),
@@ -214,15 +215,13 @@ def diversify_population(population, fitness_scores):
             new_robot.tree = generate_random_tree(max_depth=random.randint(5, 7))
             diversified_population.append(new_robot)
         else:
-            # Realizar una mutación agresiva en un clon
             clone = copy.deepcopy(population[i])
-            mutate(clone, mutation_rate=random.uniform(0.3, 0.5))  # Mutación más alta
+            mutate(clone, mutation_rate=random.uniform(0.3, 0.5))
             diversified_population.append(clone)
     return diversified_population
 
-def partial_reinitialization(population, fitness_scores, reinit_fraction=0.2):
+def partial_reinitialization(population, fitness_scores, reinit_fraction=0.3):  # Aumentamos a 30%
     num_to_reinit = int(len(population) * reinit_fraction)
-    # Seleccionamos aleatoriamente individuos para reemplazar
     indices_to_reinit = random.sample(range(len(population)), num_to_reinit)
     for idx in indices_to_reinit:
         population[idx] = Robot(
@@ -233,9 +232,8 @@ def partial_reinitialization(population, fitness_scores, reinit_fraction=0.2):
         population[idx].tree = generate_random_tree()
     return population
 
+
 def calculate_genetic_diversity(population):
-    # Usando la distancia de Levenshtein para calcular la diversidad de los árboles
-    # como un proxy de diversidad genética
     def levenshtein(a, b):
         if len(a) < len(b):
             return levenshtein(b, a)
@@ -268,6 +266,7 @@ def calculate_genetic_diversity(population):
         return 0
     return total_diversity / num_comparisons
 
+
 def tree_to_string(node):
     if node is None:
         return ''
@@ -275,50 +274,44 @@ def tree_to_string(node):
         return f"({tree_to_string(node.left)} {node.operation} {tree_to_string(node.right)})"
     return str(node.value)
 
-# Parámetros de la evolución
-POPULATION_SIZE = 50
-NUM_GENERATIONS = 100
-MUTATION_RATE = 0.1
-STAGNATION_THRESHOLD = 2
 def plot_fitness_over_time(fitness_values):
     plt.plot(fitness_values)
     plt.xlabel('Generación')
     plt.ylabel('Fitness')
     plt.title('Evolución del fitness a lo largo de las generaciones')
     plt.show()
-# Modifica la tasa de mutación para ver si hay mejoras
+
 def run_evolution():
-    # Inicializar población
     population = initialize_population()
     stagnation_counter = 0
     mutation_rate = MUTATION_RATE
-    fitness_over_time = []  # Lista para almacenar el fitness de cada generación
+    fitness_over_time = []
 
     for generation in range(NUM_GENERATIONS):
         print(f"Generación {generation + 1}/{NUM_GENERATIONS}")
 
-        # Evaluación de la población
         fitness_scores = evaluate_population_fitness(population)
 
-        # Obtener el mejor fitness de esta generación
         max_fitness = max(fitness_scores)
         best_fitness = max_fitness
         best_individual = population[fitness_scores.index(max_fitness)]
 
         print(f"Mejor fitness de esta generación: {max_fitness:.5f}")
 
-        # Almacenar el mejor fitness de esta generación
         fitness_over_time.append(max_fitness)
 
-        # Estancamiento detectado, aumentar la tasa de mutación
+        # Detectar estancamiento por fitness
         if stagnation_counter >= STAGNATION_THRESHOLD:
-            mutation_rate = min(0.5, mutation_rate * 1.5)
+            mutation_rate = min(0.5, mutation_rate * 1.5)  # Aumentar la tasa de mutación
             stagnation_counter = 0
             print("Aumentando tasa de mutación debido al estancamiento...")
-        else:
-            mutation_rate = MUTATION_RATE
 
-        # Selección y cruzamiento
+        # Calcular diversidad genética y ajustar tasa de mutación si es baja
+        diversity_score = calculate_genetic_diversity(population)
+        if diversity_score < 0.5:  # Si la diversidad es baja
+            mutation_rate = min(0.5, mutation_rate * 1.05)  # Aumento gradual
+            print(f"División genética baja: {diversity_score:.5f}, aumentando tasa de mutación a {mutation_rate:.2f}")
+        
         elites = elitism_selection(population, fitness_scores)
         new_population = []
 
@@ -336,17 +329,16 @@ def run_evolution():
 
         population = elites + new_population
 
-        # Diversificación y reinicialización parcial
+        # Diversificar población y realizar reinicialización parcial
         population = diversify_population(population, fitness_scores)
         population = partial_reinitialization(population, fitness_scores)
 
-    # Después del bucle, graficar la evolución del fitness
     plot_fitness_over_time(fitness_over_time)
 
     return best_individual
-# Ejecutar la evolución
+
+
 best_robot = run_evolution()
 
-# Mostrar el mejor robot encontrado
 print("Mejor robot encontrado:")
 print(f"Fitness: {best_robot.fitness:.3f}")
