@@ -168,7 +168,7 @@ def tournament_selection(population, state, tournament_size=3):
 
 # Evolution function generates the next generation of programs.
 # It uses elitism, mutation, and crossover to evolve the population.
-def evolve(population, state, mutation_rate=0.2, crossover_rate=0.8, elitism=1, random_injection=0.2):
+def evolve(population, state, mutation_rate=0.2, crossover_rate=0.7, elitism=2, random_injection=0.2):
     # Sort the population based on fitness, so the best programs are at the front.
     population.sort(key=lambda p: evaluate_fitness(p, state), reverse=True)
     new_population = population[:elitism]  # Elitism: Keep the top programs.

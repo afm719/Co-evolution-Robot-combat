@@ -1,17 +1,39 @@
+# This code implements an evolutionary algorithm using expression trees to optimize a robot's behavior in a simulated environment. 
+# The key parameters are:  
+
+# -POPULATION_SIZE = 100 – Number of robots in the population.  
+# - NUM_GENERATIONS = 200 – Total generations for evolution.  
+# - MUTATION_RATE = 0.1– Probability of mutation in offspring.  
+# - STAGNATION_THRESHOLD = 5 – Number of stagnant generations before increasing mutation.  
+
+# Each robot is represented by a decision tree that evaluates its position, health, and enemy location to determine the best actions. 
+# The algorithm evolves the population using:  
+
+# - Selection:Tournament selection and elitism to keep the best individuals.  
+# - Crossover: Subtree swapping between two parent trees.  
+# - Mutation: Replacing subtrees for genetic diversity.  
+# - Diversity Management: Adjusting mutation rates and partial population reinitialization.  
+
+# Fitness is calculated based on distance to goal, health, enemy proximity, and tree complexity. 
+# The algorithm dynamically adjusts mutation and reinitializes part of the population if diversity is low. 
+# Finally, the best fitness evolution is visualized using matplotlib
+
+
+
 import random
 import matplotlib.pyplot as plt
 import numpy as np
 import concurrent.futures
 import copy
 
-# Parámetros de la evolución
+
 POPULATION_SIZE = 100
 
 NUM_GENERATIONS = 200
 MUTATION_RATE = 0.1
 STAGNATION_THRESHOLD = 5
 BEST_SOLUTIONS = []
-# Definición de la clase Node para el árbol de expresión
+
 class Node:
     def __init__(self, operation=None, left=None, right=None, value=None):
         self.operation = operation
@@ -40,7 +62,7 @@ class Node:
                 return robot.enemy_position[0]
         return 0
 
-# Clase Robot
+
 class Robot:
     def __init__(self, position, health, enemy_position):
         self.position = position
@@ -56,19 +78,16 @@ class Robot:
         if self.tree:
             raw_fitness = self.tree.evaluate(self)
 
-            # Componentes de la evaluación: Distancia al objetivo, salud, distancia al enemigo
             distance_to_goal = abs(self.position[0] - 0.5) + abs(self.position[1] - 0.5)
-            health_penalty = max(0, 1 - self.health)  # Penalización por baja salud
+            health_penalty = max(0, 1 - self.health)  
             distance_to_enemy = max(0, 1 - (abs(self.enemy_position[0] - self.position[0]) + abs(self.enemy_position[1] - self.position[1])) / 2)
 
-            # Penalización por complejidad del árbol
-            complexity_penalty = (len(tree_to_string(self.tree)) / 50.0)  # Penalización más fuerte
+            complexity_penalty = (len(tree_to_string(self.tree)) / 50.0)  
 
 
-            # Calcular el fitness total con ponderaciones balanceadas
             raw_fitness = 1 - (0.4 * distance_to_goal + 0.4 * health_penalty + 0.2 * distance_to_enemy + complexity_penalty)
             
-            # Normalizar fitness entre 0 y 1
+    
             self.fitness = self.normalize_fitness(raw_fitness, 0, 1)
             return self.fitness
         
@@ -125,16 +144,16 @@ def elitism_selection(population, fitness_scores, elite_fraction=0.1):
     elites = [ind for ind, _ in sorted_population[:num_elites]]
     return elites
 
-def partial_reinitialization(population, fitness_scores, reinit_fraction=0.5):  # Aumentada a 50%
+def partial_reinitialization(population, fitness_scores, reinit_fraction=0.5):  
     num_to_reinit = int(len(population) * reinit_fraction)
     
-    # Ordenar los individuos según su fitness (ascendente)
+
     sorted_indices = sorted(range(len(fitness_scores)), key=lambda i: fitness_scores[i])
     
-    # Seleccionar los peores individuos para reinicialización
+    
     indices_to_reinit = sorted_indices[:num_to_reinit]
     
-    # Reinicializar individuos seleccionados
+    
     for idx in indices_to_reinit:
         population[idx] = Robot(
             position=[random.uniform(0, 1), random.uniform(0, 1)],
@@ -146,29 +165,25 @@ def partial_reinitialization(population, fitness_scores, reinit_fraction=0.5):  
     return population
 
 def deeper_mutate(individual, mutation_rate=0.05):
-    """Mutación agresiva que reemplaza subárboles completos."""
     if random.random() < mutation_rate:
-        # Selecciona un subárbol al azar para mutar
+        
         subtree_to_mutate = random_subtree(individual.tree)
         
-        # Genera un nuevo subárbol para reemplazar el subárbol seleccionado
-        new_subtree = generate_random_tree(depth=0, max_depth=3)  # Árbol pequeño
         
-        # Reemplaza el subárbol seleccionado con el nuevo subárbol
-        if subtree_to_mutate is individual.tree:  # Si el subárbol a mutar es la raíz
+        new_subtree = generate_random_tree(depth=0, max_depth=3)  
+        
+      
+        if subtree_to_mutate is individual.tree:  
             individual.tree = new_subtree
         else:
             replace_subtree(individual.tree, subtree_to_mutate, new_subtree)
 
 def replace_subtree(root, old_subtree, new_subtree):
-    """Reemplaza un subárbol viejo por un nuevo subárbol en el árbol dado."""
     if root is None:
         return None
     
     if root == old_subtree:
-        return new_subtree  # Reemplaza el subárbol antiguo con el nuevo
-    
-    # Recurre en los subárboles izquierdo y derecho
+        return new_subtree  
     if root.left:
         root.left = replace_subtree(root.left, old_subtree, new_subtree)
     if root.right:
@@ -181,15 +196,12 @@ def crossover_trees_with_subtrees(tree1, tree2):
         return tree1, tree2
 
     if random.random() < 0.7:
-        # Selecciona subárboles profundos al azar
         subtree1 = random_subtree(tree1)
         subtree2 = random_subtree(tree2)
-        # Intercambia los subárboles
         subtree1, subtree2 = subtree2, subtree1
     return tree1, tree2
 
 def random_subtree(tree, depth=0, max_depth=5):
-    """Selecciona un subárbol al azar."""
     if depth > max_depth or tree is None:
         return tree
     if random.random() < 0.5 and tree.left:
@@ -199,21 +211,17 @@ def random_subtree(tree, depth=0, max_depth=5):
     return tree
 
 def calculate_population_diversity(population):
-    """Calcula una medida de diversidad basada en la diferencia entre árboles."""
     unique_trees = set(tree_to_string(robot.tree) for robot in population)
     return len(unique_trees) / len(population)
 
 def adjust_mutation_rate(current_rate, diversity, threshold=0.2):
-    """Ajusta la tasa de mutación dinámicamente según la diversidad."""
-    if diversity < threshold:  # Si la diversidad es baja
-        return min(0.6, current_rate * 1.5)  # Aumenta la tasa de mutación
-    return max(0.1, current_rate * 0.8)  # Reduce si hay suficiente diversidad
+    if diversity < threshold:  
+        return min(0.6, current_rate * 1.5) 
+    return max(0.1, current_rate * 0.8)  
 
 def diversify_based_on_fitness(population, fitness_scores, threshold=0.01):
-    """Diversifica población si la desviación del fitness es muy baja."""
     std_fitness = np.std(fitness_scores)
-    if std_fitness < threshold:  # Detecta convergencia en fitness
-        print("Baja desviación estándar de fitness, reinicializando parte de la población...")
+    if std_fitness < threshold:  
         return partial_reinitialization(population, fitness_scores, reinit_fraction=0.5)
     return population
 
@@ -222,6 +230,9 @@ def update_best_solutions(best_individual, fitness, max_size=5):
     global BEST_SOLUTIONS
     BEST_SOLUTIONS.append((copy.deepcopy(best_individual), fitness))
     BEST_SOLUTIONS = sorted(BEST_SOLUTIONS, key=lambda x: x[1], reverse=True)[:max_size]
+
+
+    
 
 def run_evolution():
     population = initialize_population()
@@ -232,33 +243,28 @@ def run_evolution():
     for generation in range(NUM_GENERATIONS):
         print(f"Generación {generation + 1}/{NUM_GENERATIONS}")
 
-        # Evaluar fitness de la población
         fitness_scores = evaluate_population_fitness(population)
 
         max_fitness = max(fitness_scores)
         best_individual = population[fitness_scores.index(max_fitness)]
 
-        print(f"Mejor fitness de esta generación: {max_fitness:.5f}")
+        print(f"Best fitness of this generation: {max_fitness:.5f}")
         fitness_over_time.append(max_fitness)
-        # Actualizar el registro de las mejores soluciones
         update_best_solutions(best_individual, max_fitness)
 
-        # Calcular diversidad y ajustar la tasa de mutación
         diversity = calculate_population_diversity(population)
         mutation_rate = adjust_mutation_rate(mutation_rate, diversity)
-        print(f"Diversidad actual: {diversity:.2f}, Tasa de mutación ajustada: {mutation_rate:.2f}")
+        print(f"Diversity: {diversity:.2f}, Mutation rate adjusted: {mutation_rate:.2f}")
+        
 
-        # Detectar estancamiento
         if stagnation_counter >= STAGNATION_THRESHOLD:
             mutation_rate = min(0.6, mutation_rate * 1.5)
             stagnation_counter = 0
-            print("Aumentando tasa de mutación debido al estancamiento...")
 
-        # Selección de élites
+
         elites = elitism_selection(population, fitness_scores)
         new_population = []
 
-        # Generación de nueva población
         while len(new_population) < POPULATION_SIZE - len(elites):
             parent1 = tournament_selection(population, fitness_scores)
             parent2 = tournament_selection(population, fitness_scores)
@@ -277,18 +283,14 @@ def run_evolution():
 
         population = elites + new_population
 
-        # **Ajuste dinámico del umbral de diversificación**
         dynamic_threshold = 0.05 if generation > NUM_GENERATIONS // 2 else 0.01
-        std_fitness = np.std(fitness_scores)  # Calculamos la desviación estándar de los fitness
+        std_fitness = np.std(fitness_scores)  
         if std_fitness < dynamic_threshold:
-            print("Diversificación necesaria...")
             population = partial_reinitialization(population, fitness_scores, reinit_fraction=0.3)
 
-        # Diversificación adicional y reinicialización
         population = diversify_based_on_fitness(population, fitness_scores)
         population = partial_reinitialization(population, fitness_scores)
 
-        # Estancamiento
         if max_fitness == max(fitness_scores):
             stagnation_counter += 1
         else:
@@ -298,31 +300,23 @@ def run_evolution():
 
 
 
-
-import matplotlib.pyplot as plt
-
 def plot_fitness(fitness_over_time):
     plt.figure(figsize=(12, 6))
     
-    # Graficamos el fitness con un estilo atractivo
     plt.plot(fitness_over_time, label="Best Fitness", color='darkgreen', linestyle='--', marker='o', markersize=6, markerfacecolor='green', markeredgewidth=2)
     
-    # Títulos y etiquetas con una tipografía más destacada
     plt.title("Best Fitness Evolution Over Generations", fontsize=16, fontweight='bold', color='darkred')
     plt.xlabel("Generations", fontsize=12, fontweight='bold')
     plt.ylabel("Fitness", fontsize=12, fontweight='bold')
     
-    # Fondo de la gráfica y ajuste de la cuadrícula
-    plt.gca().set_facecolor('#f0f0f0')  # Fondo gris claro
+    plt.gca().set_facecolor('#f0f0f0')  
     plt.grid(True, which='both', linestyle='-.', color='gray', alpha=0.7)
     
-    # Leyenda y personalización
     plt.legend(loc='upper left', fontsize=12, frameon=False, title="Métricas de Fitness", title_fontsize=13)
-    
-    # Aseguramos que todo se ajuste bien en la figura
+
     plt.tight_layout()
     
-    # Mostramos la gráfica
+
     plt.show()
 
 
