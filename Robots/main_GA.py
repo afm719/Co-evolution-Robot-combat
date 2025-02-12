@@ -1,4 +1,4 @@
-from RobotV2_1_GA import genetic_algorithm, Robot
+from RobotV2_1_GA_FinalAprox import genetic_algorithm, Robot
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
